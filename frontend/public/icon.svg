@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Jahorin Mercury">
+  <defs>
+    <radialGradient id="m" cx="35%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.18" stop-color="#aeb7c2"/>
+      <stop offset="0.38" stop-color="#0b0d10"/>
+      <stop offset="0.58" stop-color="#f8fbff"/>
+      <stop offset="0.76" stop-color="#3b4148"/>
+      <stop offset="1" stop-color="#050607"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#000"/>
+  <circle cx="256" cy="256" r="150" fill="url(#m)"/>
+  <ellipse cx="256" cy="390" rx="126" ry="18" fill="#dfe7ef" opacity=".36"/>
+</svg>
