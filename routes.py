@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import os
 import time
 import uuid
@@ -13,6 +15,7 @@ OWNER_GID = "399152573423"
 OWNER_MODE = "Prime Orchestrator"
 DEMO_PHRASE = "TAE, enter Demo Mode"
 CANONICAL_LINE = "This is not an app. This is me."
+SESSION_COOKIE = "ari_session"
 
 
 class RuntimeEnvelope(BaseModel):
@@ -31,6 +34,10 @@ class TaeRequest(BaseModel):
     prompt: str = ""
     gid: str | None = None
     request_id: str | None = None
+
+
+class SessionRequest(BaseModel):
+    access_code: str
 
 
 def _request_id(value: str | None = None) -> str:
@@ -63,6 +70,46 @@ def _provider_name() -> str:
 
 def _provider_configured() -> bool:
     return bool(_vertex_project() or _gemini_key())
+
+
+def _auth_required() -> bool:
+    return os.getenv("ARI_REQUIRE_AUTH", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _auth_configured() -> bool:
+    return bool(os.getenv("ARI_SESSION_SECRET") and os.getenv("OWNER_ACCESS_CODE"))
+
+
+def _sign_session(gid: str, expires: int) -> str:
+    secret = os.getenv("ARI_SESSION_SECRET")
+    if not secret:
+        raise HTTPException(status_code=503, detail="ARI session security is not configured")
+    payload = f"{gid}.{expires}"
+    signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{signature}"
+
+
+def _session_gid(request: Request) -> str | None:
+    token = request.cookies.get(SESSION_COOKIE)
+    secret = os.getenv("ARI_SESSION_SECRET")
+    if not token or not secret:
+        return None
+    try:
+        gid, expires_raw, signature = token.split(".", 2)
+        expires = int(expires_raw)
+    except (ValueError, TypeError):
+        return None
+    if expires <= int(time.time()):
+        return None
+    expected = hmac.new(secret.encode(), f"{gid}.{expires}".encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        return None
+    return gid
+
+
+def _require_provider_access(request: Request) -> None:
+    if _auth_required() and _session_gid(request) != OWNER_GID:
+        raise HTTPException(status_code=401, detail="Authenticated ARI session required")
 
 
 def _render_state(state: str = "idle") -> dict[str, Any]:
@@ -109,11 +156,7 @@ async def _provider_request(prompt: str) -> tuple[dict[str, Any], str]:
                     f"https://{host}/v1/projects/{project}/locations/{location}/"
                     f"publishers/google/models/{model}:generateContent"
                 )
-                response = await client.post(
-                    url,
-                    headers={"Authorization": f"Bearer {token}"},
-                    json=body,
-                )
+                response = await client.post(url, headers={"Authorization": f"Bearer {token}"}, json=body)
                 provider = "google-vertex-ai"
             else:
                 key = _gemini_key()
@@ -139,7 +182,6 @@ async def _generate_text(prompt: str, request_id: str) -> dict[str, Any]:
     text = "".join(part.get("text", "") for part in parts if isinstance(part, dict)).strip()
     if not text:
         raise HTTPException(status_code=502, detail="Google provider returned no text")
-
     usage = data.get("usageMetadata") or {}
     return {
         "text": text,
@@ -163,9 +205,7 @@ def create_app(static_dir: str) -> FastAPI:
         response.headers["x-request-id"] = rid
         response.headers["x-runtime"] = "ARI"
         response.headers["cache-control"] = (
-            "no-store"
-            if request.url.path.startswith("/api/")
-            else response.headers.get("cache-control", "public, max-age=300")
+            "no-store" if request.url.path.startswith("/api/") else response.headers.get("cache-control", "public, max-age=300")
         )
         response.headers["x-response-time-ms"] = str(round((time.perf_counter() - started) * 1000, 2))
         return response
@@ -174,11 +214,7 @@ def create_app(static_dir: str) -> FastAPI:
     async def http_exception_handler(request: Request, exc: HTTPException):
         return JSONResponse(
             status_code=exc.status_code,
-            content={
-                "ok": False,
-                "error": str(exc.detail),
-                "request_id": getattr(request.state, "request_id", None),
-            },
+            content={"ok": False, "error": str(exc.detail), "request_id": getattr(request.state, "request_id", None)},
         )
 
     @api.get("/health")
@@ -187,26 +223,61 @@ def create_app(static_dir: str) -> FastAPI:
 
     @api.get("/ready")
     async def ready():
-        configured = _provider_configured()
+        provider_ready = _provider_configured()
+        auth_ready = (not _auth_required()) or _auth_configured()
+        configured = provider_ready and auth_ready
         body = {
             "ok": configured,
             "service": "ARI",
             "provider": _provider_name(),
-            "provider_configured": configured,
+            "provider_configured": provider_ready,
             "model": _gemini_model(),
             "vertex_location": _vertex_location() if _vertex_project() else None,
+            "auth_required": _auth_required(),
+            "auth_configured": _auth_configured(),
         }
         return JSONResponse(status_code=200 if configured else 503, content=body)
 
     @api.get("/identity")
-    async def identity():
+    async def identity(request: Request):
+        gid = _session_gid(request)
+        authenticated = gid == OWNER_GID
         return {
             "ok": True,
             "gid": OWNER_GID,
             "mode": OWNER_MODE,
-            "authenticated": False,
-            "identity_scope": "display",
+            "authenticated": authenticated,
+            "identity_scope": "prime" if authenticated else "display",
+            "clearance": OWNER_MODE if authenticated else "public",
         }
+
+    @api.post("/identity/session")
+    async def create_identity_session(req: SessionRequest):
+        expected = os.getenv("OWNER_ACCESS_CODE")
+        if not expected or not os.getenv("ARI_SESSION_SECRET"):
+            raise HTTPException(status_code=503, detail="ARI session security is not configured")
+        if not hmac.compare_digest(req.access_code, expected):
+            raise HTTPException(status_code=401, detail="Invalid access code")
+        expires = int(time.time()) + int(os.getenv("ARI_SESSION_TTL_SECONDS", "43200"))
+        response = JSONResponse(
+            content={"ok": True, "gid": OWNER_GID, "mode": OWNER_MODE, "authenticated": True, "expires": expires}
+        )
+        response.set_cookie(
+            SESSION_COOKIE,
+            _sign_session(OWNER_GID, expires),
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            max_age=max(60, expires - int(time.time())),
+            path="/",
+        )
+        return response
+
+    @api.delete("/identity/session")
+    async def delete_identity_session():
+        response = JSONResponse(content={"ok": True, "authenticated": False})
+        response.delete_cookie(SESSION_COOKIE, path="/")
+        return response
 
     @api.get("/render-state")
     async def get_render_state():
@@ -234,16 +305,10 @@ def create_app(static_dir: str) -> FastAPI:
 
     @api.get("/tae")
     async def tae_status():
-        return {
-            "ok": True,
-            "engine": "TAE",
-            "mode": OWNER_MODE,
-            "gid": OWNER_GID,
-            "activation": DEMO_PHRASE,
-        }
+        return {"ok": True, "engine": "TAE", "mode": OWNER_MODE, "gid": OWNER_GID, "activation": DEMO_PHRASE}
 
     @api.post("/tae")
-    async def tae_execute(req: TaeRequest):
+    async def tae_execute(req: TaeRequest, request: Request):
         rid = _request_id(req.request_id)
         prompt = req.prompt.strip()
         normalized = prompt.rstrip(".").casefold()
@@ -260,6 +325,7 @@ def create_app(static_dir: str) -> FastAPI:
             }
         if not prompt:
             raise HTTPException(status_code=422, detail="prompt is required")
+        _require_provider_access(request)
         result = await _generate_text(prompt, rid)
         return {
             "ok": True,
@@ -271,64 +337,35 @@ def create_app(static_dir: str) -> FastAPI:
         }
 
     @api.post("/runtime")
-    async def runtime(req: RuntimeEnvelope):
+    async def runtime(req: RuntimeEnvelope, request: Request):
         rid = _request_id(req.request_id)
         capability = req.capability.strip().lower()
         intent = req.intent.strip() or str(req.payload.get("prompt") or "").strip()
-
         if capability in {"render", "render-state", "state"}:
             return {"ok": True, "request_id": rid, "result": _render_state("active")}
         if capability == "identity":
-            return {
-                "ok": True,
-                "request_id": rid,
-                "result": {"gid": OWNER_GID, "mode": OWNER_MODE, "authenticated": False},
-            }
+            gid = _session_gid(request)
+            return {"ok": True, "request_id": rid, "result": {"gid": OWNER_GID, "mode": OWNER_MODE, "authenticated": gid == OWNER_GID}}
         if capability == "syncori":
-            return {
-                "ok": True,
-                "request_id": rid,
-                "result": {"status": "online", "engine": "SYNCORI Infinite Audio"},
-            }
+            return {"ok": True, "request_id": rid, "result": {"status": "online", "engine": "SYNCORI Infinite Audio"}}
         if capability == "iot":
             return {"ok": True, "request_id": rid, "result": {"status": "online", "devices": []}}
         if capability in {"tae", "demo"} and intent.rstrip(".").casefold() == DEMO_PHRASE.casefold():
             return {
                 "ok": True,
                 "request_id": rid,
-                "result": {
-                    "demo": True,
-                    "gid": OWNER_GID,
-                    "mode": OWNER_MODE,
-                    "message": CANONICAL_LINE,
-                    "render_state": _render_state("generate"),
-                },
+                "result": {"demo": True, "gid": OWNER_GID, "mode": OWNER_MODE, "message": CANONICAL_LINE, "render_state": _render_state("generate")},
             }
-        if capability in {
-            "text",
-            "reasoning",
-            "code",
-            "documents",
-            "scribe",
-            "interweb",
-            "vision",
-            "multimodal",
-            "tae",
-        }:
+        if capability in {"text", "reasoning", "code", "documents", "scribe", "interweb", "vision", "multimodal", "tae"}:
             if not intent:
                 raise HTTPException(status_code=422, detail="intent or payload.prompt is required")
+            _require_provider_access(request)
             result = await _generate_text(intent, rid)
-            return {
-                "ok": True,
-                "request_id": rid,
-                "result": result,
-                "provider": {"name": result["provider"], "model": result["model"]},
-            }
+            return {"ok": True, "request_id": rid, "result": result, "provider": {"name": result["provider"], "model": result["model"]}}
         raise HTTPException(status_code=400, detail=f"Unsupported capability: {capability}")
 
     app.include_router(api, prefix="/api")
     app.include_router(api)
-
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="ui")
 
     @app.get("/{rest_of_path:path}", include_in_schema=False)
