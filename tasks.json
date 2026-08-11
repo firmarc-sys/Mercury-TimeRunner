@@ -1,0 +1,17 @@
+[
+  {
+    "id": "restructure-project",
+    "content": "Restructure project: move v2 into /frontend, configure build to output to /static.",
+    "status": "completed"
+  },
+  {
+    "content": "Update Dockerfile to run npm install/build before FastAPI.",
+    "status": "completed",
+    "id": "update-dockerfile"
+  },
+  {
+    "id": "update-routes",
+    "content": "Update routes.py to serve React build correctly.",
+    "status": "completed"
+  }
+]
