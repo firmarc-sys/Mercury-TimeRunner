@@ -1,16 +1,25 @@
 FROM python:3.12-slim
 
-# Install Node.js
-RUN apt-get update && apt-get install -y nodejs npm && rm -rf /var/lib/apt/lists/*
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
+
+# Install Node.js for the Vite frontend build.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY . .
 
-# Build frontend
+# Build the frontend. vite.config.js writes the production bundle to /app/static.
 RUN cd frontend && npm install && npm run build
 
-# Install Python dependencies
-RUN pip install --no-cache-dir uv
-RUN uv sync
+# Install the Python runtime into uv's project virtual environment.
+RUN pip install --no-cache-dir uv \
+    && uv sync --frozen --no-dev
 
-CMD ["sh", "-c", "uvicorn app:asgi --host 0.0.0.0 --port ${PORT:-8080}"]
+EXPOSE 8080
+
+# Cloud Run injects PORT. `uv run` is required because uv sync installs
+# FastAPI/Uvicorn into the project virtual environment rather than globally.
+CMD ["sh", "-c", "exec uv run uvicorn app:asgi --host 0.0.0.0 --port ${PORT:-8080}"]
