@@ -45,8 +45,24 @@ def _gemini_model() -> str:
     return os.getenv("GEMINI_DEFAULT_MODEL", "gemini-3.6-flash")
 
 
+def _vertex_project() -> str | None:
+    return os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT")
+
+
+def _vertex_location() -> str:
+    return os.getenv("VERTEX_LOCATION", "global")
+
+
+def _provider_name() -> str:
+    if _vertex_project():
+        return "google-vertex-ai"
+    if _gemini_key():
+        return "google-gemini-api"
+    return "unconfigured"
+
+
 def _provider_configured() -> bool:
-    return bool(_gemini_key())
+    return bool(_vertex_project() or _gemini_key())
 
 
 def _render_state(state: str = "idle") -> dict[str, Any]:
@@ -61,13 +77,22 @@ def _render_state(state: str = "idle") -> dict[str, Any]:
     }
 
 
-async def _generate_text(prompt: str, request_id: str) -> dict[str, Any]:
-    key = _gemini_key()
-    if not key:
-        raise HTTPException(status_code=503, detail="Google provider is not configured")
+async def _metadata_access_token(client: httpx.AsyncClient) -> str:
+    url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token"
+    try:
+        response = await client.get(url, headers={"Metadata-Flavor": "Google"}, timeout=5.0)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail="Cloud Run service identity is unavailable") from exc
+    if response.status_code != 200:
+        raise HTTPException(status_code=503, detail="Cloud Run service identity token could not be acquired")
+    token = response.json().get("access_token")
+    if not token:
+        raise HTTPException(status_code=503, detail="Cloud Run service identity returned no access token")
+    return token
 
+
+async def _provider_request(prompt: str) -> tuple[dict[str, Any], str]:
     model = _gemini_model()
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     body = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.7},
@@ -75,7 +100,28 @@ async def _generate_text(prompt: str, request_id: str) -> dict[str, Any]:
 
     try:
         async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(url, params={"key": key}, json=body)
+            project = _vertex_project()
+            if project:
+                location = _vertex_location()
+                token = await _metadata_access_token(client)
+                host = "aiplatform.googleapis.com" if location == "global" else f"{location}-aiplatform.googleapis.com"
+                url = (
+                    f"https://{host}/v1/projects/{project}/locations/{location}/"
+                    f"publishers/google/models/{model}:generateContent"
+                )
+                response = await client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {token}"},
+                    json=body,
+                )
+                provider = "google-vertex-ai"
+            else:
+                key = _gemini_key()
+                if not key:
+                    raise HTTPException(status_code=503, detail="Google provider is not configured")
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                response = await client.post(url, params={"key": key}, json=body)
+                provider = "google-gemini-api"
     except httpx.TimeoutException as exc:
         raise HTTPException(status_code=504, detail="Google provider timed out") from exc
     except httpx.HTTPError as exc:
@@ -83,8 +129,11 @@ async def _generate_text(prompt: str, request_id: str) -> dict[str, Any]:
 
     if response.status_code >= 400:
         raise HTTPException(status_code=502, detail=f"Google provider returned HTTP {response.status_code}")
+    return response.json(), provider
 
-    data = response.json()
+
+async def _generate_text(prompt: str, request_id: str) -> dict[str, Any]:
+    data, provider = await _provider_request(prompt)
     candidates = data.get("candidates") or []
     parts = (((candidates[0] if candidates else {}).get("content") or {}).get("parts") or [])
     text = "".join(part.get("text", "") for part in parts if isinstance(part, dict)).strip()
@@ -94,7 +143,8 @@ async def _generate_text(prompt: str, request_id: str) -> dict[str, Any]:
     usage = data.get("usageMetadata") or {}
     return {
         "text": text,
-        "model": model,
+        "model": _gemini_model(),
+        "provider": provider,
         "request_id": request_id,
         "tokens": usage.get("totalTokenCount"),
     }
@@ -108,14 +158,15 @@ def create_app(static_dir: str) -> FastAPI:
     async def request_context(request: Request, call_next):
         rid = request.headers.get("x-request-id") or str(uuid.uuid4())
         started = time.perf_counter()
-        try:
-            response = await call_next(request)
-        except Exception:
-            # FastAPI's exception handlers normalize the body; never emit secrets here.
-            raise
+        request.state.request_id = rid
+        response = await call_next(request)
         response.headers["x-request-id"] = rid
         response.headers["x-runtime"] = "ARI"
-        response.headers["cache-control"] = "no-store" if request.url.path.startswith("/api/") else response.headers.get("cache-control", "public, max-age=300")
+        response.headers["cache-control"] = (
+            "no-store"
+            if request.url.path.startswith("/api/")
+            else response.headers.get("cache-control", "public, max-age=300")
+        )
         response.headers["x-response-time-ms"] = str(round((time.perf_counter() - started) * 1000, 2))
         return response
 
@@ -126,7 +177,7 @@ def create_app(static_dir: str) -> FastAPI:
             content={
                 "ok": False,
                 "error": str(exc.detail),
-                "request_id": request.headers.get("x-request-id"),
+                "request_id": getattr(request.state, "request_id", None),
             },
         )
 
@@ -140,15 +191,15 @@ def create_app(static_dir: str) -> FastAPI:
         body = {
             "ok": configured,
             "service": "ARI",
-            "provider": "google-gemini",
+            "provider": _provider_name(),
             "provider_configured": configured,
             "model": _gemini_model(),
+            "vertex_location": _vertex_location() if _vertex_project() else None,
         }
         return JSONResponse(status_code=200 if configured else 503, content=body)
 
     @api.get("/identity")
     async def identity():
-        # Display identity is intentionally not equivalent to authentication.
         return {
             "ok": True,
             "gid": OWNER_GID,
@@ -216,7 +267,7 @@ def create_app(static_dir: str) -> FastAPI:
             "gid": OWNER_GID,
             "mode": OWNER_MODE,
             "reply": {"kind": "prose", "text": result["text"], "tokens": result.get("tokens")},
-            "provider": {"name": "google-gemini", "model": result["model"]},
+            "provider": {"name": result["provider"], "model": result["model"]},
         }
 
     @api.post("/runtime")
@@ -228,9 +279,17 @@ def create_app(static_dir: str) -> FastAPI:
         if capability in {"render", "render-state", "state"}:
             return {"ok": True, "request_id": rid, "result": _render_state("active")}
         if capability == "identity":
-            return {"ok": True, "request_id": rid, "result": {"gid": OWNER_GID, "mode": OWNER_MODE, "authenticated": False}}
+            return {
+                "ok": True,
+                "request_id": rid,
+                "result": {"gid": OWNER_GID, "mode": OWNER_MODE, "authenticated": False},
+            }
         if capability == "syncori":
-            return {"ok": True, "request_id": rid, "result": {"status": "online", "engine": "SYNCORI Infinite Audio"}}
+            return {
+                "ok": True,
+                "request_id": rid,
+                "result": {"status": "online", "engine": "SYNCORI Infinite Audio"},
+            }
         if capability == "iot":
             return {"ok": True, "request_id": rid, "result": {"status": "online", "devices": []}}
         if capability in {"tae", "demo"} and intent.rstrip(".").casefold() == DEMO_PHRASE.casefold():
@@ -245,7 +304,17 @@ def create_app(static_dir: str) -> FastAPI:
                     "render_state": _render_state("generate"),
                 },
             }
-        if capability in {"text", "reasoning", "code", "documents", "scribe", "interweb", "vision", "multimodal", "tae"}:
+        if capability in {
+            "text",
+            "reasoning",
+            "code",
+            "documents",
+            "scribe",
+            "interweb",
+            "vision",
+            "multimodal",
+            "tae",
+        }:
             if not intent:
                 raise HTTPException(status_code=422, detail="intent or payload.prompt is required")
             result = await _generate_text(intent, rid)
@@ -253,12 +322,11 @@ def create_app(static_dir: str) -> FastAPI:
                 "ok": True,
                 "request_id": rid,
                 "result": result,
-                "provider": {"name": "google-gemini", "model": result["model"]},
+                "provider": {"name": result["provider"], "model": result["model"]},
             }
         raise HTTPException(status_code=400, detail=f"Unsupported capability: {capability}")
 
     app.include_router(api, prefix="/api")
-    # Preserve legacy aliases used by earlier clients.
     app.include_router(api)
 
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="ui")
