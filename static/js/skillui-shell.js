@@ -102,7 +102,7 @@ function renderDock(route = '/home/') {
 function setHeader(route, parsedDocument) {
   const pageBrand = parsedDocument.querySelector('.brand strong')?.textContent?.trim();
   const pageSubtitle = parsedDocument.querySelector('.brand')?.childNodes?.[1]?.textContent?.trim();
-  TITLE.textContent = pageBrand || (route.startsWith('/syncori') ? 'SYNCORI' : 'Jahorin Mercury Timerunner');
+  TITLE.textContent = pageBrand || (route.startsWith('/syncori') ? 'SYNCORI' : 'Agentic Mercury Time Runner');
   SUBTITLE.textContent = pageSubtitle || 'S.I.aaS · System Intelligence as a Service';
 }
 
