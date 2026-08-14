@@ -1,148 +1,119 @@
-# Jahorin Mercury Time Runner
+# Agentic Mercury Time Runner
 
-Production source for the Jahorin Mercury S.I.aaS runtime.
+Canonical zero-build production frontend for Agentic Mercury Time Runner S.I.aaS.
 
-## Canonical runtime
+## Product architecture
 
-- ARI — REST-first runtime gateway
-- Mercury — persistent runtime/orchestrator
-- TAE — Timeline Augmentation Engine
+- Agentic Mercury Time Runner — public product
+- Mercury — persistent runtime / living application shell
 - Jahorin — user-facing intelligence
 - GID — identity authority
-- Canonical owner GID: `399152573423`
-- Mode: `Prime Orchestrator`
+- TAE — Timeline Augmentation and orchestration layer
+- ARI — REST-first intelligence and capability gateway
+- SYNCORI — augmented Audio and Optics instrument suite
 
-The frontend never receives privileged Google credentials. Provider execution happens server-side through ARI.
+Jahorin remains the intelligence inside the product; it is not the public product name.
 
-## Canonical API
+## Canonical production frontend
 
-- `GET /health`
-- `GET /ready`
-- `POST /api/runtime`
-- `GET|POST /api/tae`
-- `GET|POST /api/render-state`
-- `GET|POST /api/iot`
-- `GET|POST /api/syncori`
+The production web root is `static/`.
+
+Required runtime stack:
+
+- HTML5
+- CSS3
+- Vanilla JavaScript
+- Native ES Modules
+- Native Web Components where useful
+- Canvas / WebGL where required
+- Fetch API
+- IndexedDB
+- Service Worker
+- PWA Manifest
+- browser-native device APIs
+
+There is no required React, Vite, Webpack, Babel, npm compilation, or frontend bundling step.
+
+The historical `frontend/` tree is legacy/reference material and MUST NOT be required for production deployment.
+
+## Mercury shell law
+
+The persistent application shell contains three sibling surfaces:
+
+1. HEADER
+2. VIEWPORT
+3. LIQUID DOCK
+
+The Liquid Dock never renders inside VIEWPORT. Capability content renders only inside VIEWPORT during normal in-app navigation.
+
+## Canonical manifest
+
+`static/repo-pages.json` is the source of truth and must contain exactly 25 capability pages:
+
+- Core: 5
+- SYNCORI Augmented Audio: 10
+- SYNCORI Augmented Optics: 10
+
+SYNCORI gateway rooms do not increase the canonical page count.
+
+## API topology
+
+The browser calls same-origin `/api/*` routes. Netlify proxies those requests to ARI.
+
+ARI production authority:
+
+`https://ari-689058655022.us-west1.run.app`
+
+Agentic Mercury Runtime:
+
+`https://agentic-mercury-runtime-689058655022.us-west1.run.app`
+
+Known production API surface includes:
+
+- `GET /api/health`
+- `GET /api/ready`
 - `GET /api/identity`
+- `POST /api/identity/session`
+- `DELETE /api/identity/session`
+- `GET|POST /api/render-state`
+- `/api/tae`
+- `/api/runtime`
+- `/api/syncori`
+- `/api/iot`
 
-Legacy unprefixed aliases are preserved for older clients.
+Do not expose provider credentials in browser-delivered code. Google, Gemini, Vertex, Stripe, Supabase service credentials, and other privileged secrets remain server-side behind ARI/runtime authorization.
 
-## Google provider configuration
+## Netlify production deployment
 
-Preferred production mode is Cloud Run service identity + Vertex AI:
+Root `netlify.toml` is canonical.
 
-```text
-GOOGLE_CLOUD_PROJECT=<project-id>
-VERTEX_LOCATION=global
-GEMINI_DEFAULT_MODEL=gemini-3.6-flash
+Production configuration:
+
+```toml
+[build]
+  base = "static"
+  command = ""
+  publish = "."
 ```
 
-`GEMINI_API_KEY` is an optional server-side fallback for the Gemini Developer API. Never put it in `frontend/` or a public environment variable.
+The `/api/*` proxy is declared before the persistent-shell fallback so API requests cannot be rewritten to HTML.
 
-## Local validation
+Canonical Netlify target:
 
-```bash
-# Backend
-uv sync --frozen --no-dev
-uv run python -m compileall app.py routes.py
+- Project: `jahorin-mercury`
+- Repository: `firmarc-sys/Mercury-TimeRunner`
+- Branch: `main`
+- Build command: none
+- Published web root: `static/`
 
-# Frontend
-cd frontend
-npm ci
-npm run build
-cd ..
+## Validation
 
-# Runtime
-PORT=8080 uv run uvicorn app:asgi --host 0.0.0.0 --port 8080
-```
+`.github/workflows/release-gate.yml` validates backend syntax retained in this repository, the canonical zero-build SkillUI frontend, the 25-page manifest topology, required infrastructure, and the production container.
 
-Then verify:
+`static/skillui-validation.json` records machine-readable source-release state.
 
-```bash
-curl -fsS http://localhost:8080/health
-curl -i http://localhost:8080/ready
-curl -fsS http://localhost:8080/api/identity
-curl -fsS http://localhost:8080/api/render-state
-curl -fsS http://localhost:8080/api/tae
-```
+A passing source gate is not sufficient for final release. Production is complete only after the deployed Netlify revision is verified for shell integrity, canonical routes, PWA behavior, `/api/*` proxying, GID session behavior, camera/microphone permission flows, and truthful runtime failure states.
 
-Demo activation:
+## Release rule
 
-```bash
-curl -fsS -X POST http://localhost:8080/api/tae \
-  -H 'Content-Type: application/json' \
-  -d '{"prompt":"TAE, enter Demo Mode"}'
-```
-
-## Google Cloud release prerequisites
-
-Use the existing Google Cloud project. Do not create a VM.
-
-```bash
-gcloud config set project YOUR_PROJECT_ID
-
-gcloud services enable \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com \
-  aiplatform.googleapis.com \
-  secretmanager.googleapis.com \
-  logging.googleapis.com \
-  monitoring.googleapis.com
-```
-
-Create the runtime identity once if it does not already exist:
-
-```bash
-gcloud iam service-accounts create ari-runtime \
-  --display-name='ARI Cloud Run runtime'
-
-gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member='serviceAccount:ari-runtime@YOUR_PROJECT_ID.iam.gserviceaccount.com' \
-  --role='roles/aiplatform.user'
-```
-
-Add only additional roles that the deployed runtime actually uses.
-
-## Deploy to Cloud Run
-
-The root Dockerfile builds the approved Vite frontend into `/app/static` and starts FastAPI/Uvicorn on Cloud Run's injected `PORT`.
-
-```bash
-gcloud run deploy jai-mercury-v2 \
-  --source . \
-  --region us-west1 \
-  --service-account ari-runtime@YOUR_PROJECT_ID.iam.gserviceaccount.com \
-  --set-env-vars GOOGLE_CLOUD_PROJECT=YOUR_PROJECT_ID,VERTEX_LOCATION=global,GEMINI_DEFAULT_MODEL=gemini-3.6-flash \
-  --allow-unauthenticated
-```
-
-The combined service is public because it serves the public Mercury frontend. Privileged/admin APIs must remain protected at the application authorization layer before they are added.
-
-## Release gate
-
-`.github/workflows/release-gate.yml` validates:
-
-1. Python dependency lock and backend compilation.
-2. Frontend production build.
-3. Complete production Docker image build.
-
-Do not release a commit that fails this gate.
-
-After Cloud Run deployment, `/health` must return HTTP 200 and `/ready` must return HTTP 200. `/ready` returns 503 when neither Vertex AI nor the Gemini server-side fallback is configured.
-
-## PWA
-
-The frontend includes:
-
-- `manifest.webmanifest`
-- service worker
-- standalone display mode
-- black launch background
-- no API-response caching
-
-The service worker intentionally excludes `/api/*` requests from caching.
-
-## Release status rule
-
-A successful build is not a release. Production is ready only after the live Cloud Run revision, domains/TLS, provider execution, PWA installation, and end-to-end module flows have been verified.
+Do not redesign approved visual assets, add a framework requirement, add a 26th canonical capability page, nest the Liquid Dock inside VIEWPORT, expose browser secrets, or report simulated connectivity as real connectivity.
