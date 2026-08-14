@@ -31,14 +31,53 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
 
-      - name: Build frontend
-        working-directory: frontend
+      - name: Validate zero-build SkillUI frontend
         run: |
-          npm ci
-          npm run build
+          for file in static/js/runtime.js static/js/skillui-shell.js static/js/capability.js; do
+            node --check "$file"
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('static')
+          manifest = json.loads((root / 'repo-pages.json').read_text())
+          pages = manifest['pages']
+          assert len(pages) == manifest['expectedPageCount'] == 25
+          assert manifest['groups'] == {'core': 5, 'syncori-audio': 10, 'syncori-optics': 10}
+
+          missing = []
+          for page in pages:
+              canonical = root / page['path']
+              route = page['route'].strip('/')
+              alias = root / route / 'index.html'
+              if not canonical.is_file():
+                  missing.append(str(canonical))
+              if not alias.is_file():
+                  missing.append(str(alias))
+
+          if missing:
+              raise SystemExit('Missing canonical SkillUI files:\n' + '\n'.join(missing))
+
+          required = [
+              root / 'index.html',
+              root / 'manifest.json',
+              root / 'sw.js',
+              root / 'css/skillui.css',
+              root / 'js/runtime.js',
+              root / 'js/skillui-shell.js',
+              root / 'js/capability.js',
+              root / 'syncori/index.html',
+              root / 'syncori/audio/index.html',
+              root / 'syncori/optics/index.html',
+          ]
+          absent = [str(path) for path in required if not path.is_file()]
+          if absent:
+              raise SystemExit('Missing SkillUI infrastructure:\n' + '\n'.join(absent))
+
+          print('SkillUI manifest validation: PASS 25/25')
+          PY
 
       - name: Build production container
         run: docker build -t jahorin-mercury-release-gate .

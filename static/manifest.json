@@ -1,1 +1,13 @@
-{"name":"Jahorin Mercury Timerunner","short_name":"Mercury","start_url":"/","scope":"/","display":"standalone","background_color":"#000000","theme_color":"#000000","description":"Jahorin Mercury S.I.aaS living instrument runtime"}
+{
+  "id": "/",
+  "name": "Jahorin Mercury Timerunner",
+  "short_name": "Mercury",
+  "description": "Jahorin Mercury S.I.aaS living instrument runtime",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "categories": ["productivity", "utilities", "multimedia"]
+}
