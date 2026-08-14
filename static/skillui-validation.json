@@ -1,0 +1,41 @@
+{
+  "engine": "SkillUI",
+  "status": "PASS_WITH_SOURCE_ART_LIMITATION",
+  "branch": "skillui/manifest-production-pass",
+  "sourceManifest": "/repo-pages.json",
+  "canonicalPageCount": 25,
+  "groups": {
+    "core": 5,
+    "syncori-audio": 10,
+    "syncori-optics": 10
+  },
+  "checks": {
+    "canonicalPaths": "25/25",
+    "publicRoutes": "25/25",
+    "persistentShell": true,
+    "headerViewportDockSiblings": true,
+    "liquidDockOutsideViewport": true,
+    "capabilityContentInsideViewport": true,
+    "pwaManifest": true,
+    "cacheFirstServiceWorker": true,
+    "resilientFetchWithBackoff": true,
+    "nativeCustomElements": true,
+    "jsSyntax": "pass",
+    "frontendSecretsAllowed": false
+  },
+  "runtime": {
+    "apiAuthority": "ARI",
+    "identityAuthority": "GID",
+    "runtimeAuthority": "Mercury",
+    "orchestrationAuthority": "TAE"
+  },
+  "visualSources": {
+    "core": "preserved committed core page assets",
+    "syncori-audio": "/assets2/augment.jpg",
+    "syncori-optics": "/assets2/optics.jpg"
+  },
+  "limitations": [
+    "The repository contains no distinct source artwork for the 20 SYNCORI instrument pages; generated Audio and Optics capability surfaces reuse the committed suite artwork rather than inventing replacement visuals.",
+    "This report validates repository structure, source wiring, and JavaScript syntax. It does not claim a live deployed browser smoke test."
+  ]
+}
