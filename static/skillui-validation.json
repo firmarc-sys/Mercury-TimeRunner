@@ -3,7 +3,7 @@
   "product": "Agentic Mercury Time Runner",
   "status": "SOURCE_PASS_LIVE_DEPLOY_PENDING",
   "branch": "main",
-  "sourceCommit": "7fad2f8215db5a58060f869f51e5fcf77db0ec72",
+  "validatedThroughCommit": "3c2d4d10c2d6fe14754cb423602c5cd4f5578c54",
   "sourceManifest": "/repo-pages.json",
   "canonicalPageCount": 25,
   "groups": {
