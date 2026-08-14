@@ -1,1 +1,44 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><link rel="manifest" href="/manifest.json"><link rel="stylesheet" href="/css/mercury.css"><title>Jahorin Mercury — S.I.aaS</title></head><body data-surface="landing"><main class="app" style="grid-template-rows:1fr"><section class="viewport"><video id="boot" class="intro-video" autoplay muted playsinline preload="auto"><source src="/assets2/boot.mp4" type="video/mp4"></video><div class="screen-shade"></div><div class="brand"><strong>Jahorin Mercury Timerunner</strong>S.I.aaS · System Intelligence as a Service</div><div class="status">ARI · connecting</div><div class="center-cta"><button id="enter" class="action">Enter Syncori Suite</button><button id="demo" class="action secondary">Explore Public Demo</button><p>Authenticated intelligence becomes an instrument.</p></div></section></main><script src="/js/runtime.js"></script><script>const v=document.querySelector('#boot');const c=document.querySelector('.center-cta');c.style.opacity='0';setTimeout(()=>c.style.opacity='1',1800);v.addEventListener('ended',()=>{v.poster='/assets2/mercury.jpg'});Mercury.status();document.querySelector('#enter').onclick=async()=>{const i=await Mercury.identity();location.href=i?.authenticated?'/home/':'/onboarding/'};document.querySelector('#demo').onclick=async()=>{try{const r=await Mercury.tae();Mercury.toast(r?.message||r?.reply?.text||'Demo Mode');setTimeout(()=>location.href='/home/?demo=1',650)}catch(e){Mercury.toast(e.message)}};navigator.serviceWorker?.register('/sw.js').catch(()=>{});</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/css/mercury.css">
+  <link rel="stylesheet" href="/css/skillui.css">
+  <title>Jahorin Mercury — S.I.aaS</title>
+</head>
+<body data-surface="shell">
+  <main class="app skillui-shell" id="mercury-shell">
+    <header class="shell-header" aria-label="Jahorin Mercury">
+      <div class="shell-brand">
+        <strong id="shell-title">Jahorin Mercury Timerunner</strong>
+        <span id="shell-subtitle">S.I.aaS · System Intelligence as a Service</span>
+      </div>
+      <div class="status shell-status" aria-live="polite">ARI · connecting</div>
+    </header>
+
+    <section id="ari-viewport" class="viewport shell-viewport" aria-live="polite" aria-busy="false">
+      <section id="landing" class="shell-landing" data-shell-view="landing">
+        <video id="boot" class="intro-video" autoplay muted playsinline preload="auto">
+          <source src="/assets2/boot.mp4" type="video/mp4">
+        </video>
+        <div class="screen-shade"></div>
+        <div class="center-cta">
+          <button id="enter" class="action" type="button">Enter Syncori Suite</button>
+          <button id="demo" class="action secondary" type="button">Explore Public Demo</button>
+          <p id="tae-message">Authenticated intelligence becomes an instrument.</p>
+        </div>
+      </section>
+    </section>
+
+    <nav id="liquid-dock" class="dock shell-dock" aria-label="Mercury capabilities"></nav>
+  </main>
+
+  <script src="/js/runtime.js"></script>
+  <script type="module" src="/js/skillui-shell.js"></script>
+</body>
+</html>
