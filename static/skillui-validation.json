@@ -1,7 +1,9 @@
 {
   "engine": "SkillUI",
-  "status": "PASS_WITH_SOURCE_ART_LIMITATION",
-  "branch": "skillui/manifest-production-pass",
+  "product": "Agentic Mercury Time Runner",
+  "status": "SOURCE_PASS_LIVE_DEPLOY_PENDING",
+  "branch": "main",
+  "sourceCommit": "7fad2f8215db5a58060f869f51e5fcf77db0ec72",
   "sourceManifest": "/repo-pages.json",
   "canonicalPageCount": 25,
   "groups": {
@@ -21,7 +23,10 @@
     "resilientFetchWithBackoff": true,
     "nativeCustomElements": true,
     "jsSyntax": "pass",
-    "frontendSecretsAllowed": false
+    "releaseGate": "pass",
+    "productionContainer": "pass",
+    "frontendSecretsAllowed": false,
+    "liveDeploymentVerified": false
   },
   "runtime": {
     "apiAuthority": "ARI",
@@ -29,13 +34,21 @@
     "runtimeAuthority": "Mercury",
     "orchestrationAuthority": "TAE"
   },
+  "deployment": {
+    "provider": "Netlify",
+    "project": "jahorin-mercury",
+    "canonicalRepository": "firmarc-sys/Mercury-TimeRunner",
+    "productionBranch": "main",
+    "configuration": "/netlify.toml",
+    "state": "awaiting production project repository linkage/deploy"
+  },
   "visualSources": {
     "core": "preserved committed core page assets",
     "syncori-audio": "/assets2/augment.jpg",
     "syncori-optics": "/assets2/optics.jpg"
   },
   "limitations": [
-    "The repository contains no distinct source artwork for the 20 SYNCORI instrument pages; generated Audio and Optics capability surfaces reuse the committed suite artwork rather than inventing replacement visuals.",
-    "This report validates repository structure, source wiring, and JavaScript syntax. It does not claim a live deployed browser smoke test."
+    "The repository contains no distinct source artwork for the 20 SYNCORI instrument pages; Audio and Optics capability surfaces reuse the approved committed suite artwork rather than invent replacement visuals.",
+    "Connected Netlify state still reports the older production deploy; live route, ARI proxy, camera, microphone, and GID smoke tests must be performed after the canonical Mercury-TimeRunner main branch is deployed."
   ]
 }
