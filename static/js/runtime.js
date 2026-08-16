@@ -213,6 +213,38 @@
     return result;
   }
 
+  async function confirmBillingReturn({ attempts = 12, delay = 850 } = {}) {
+    const params = new URLSearchParams(location.search);
+    const checkoutState = params.get('checkout');
+    const portalState = params.get('billing');
+
+    if (checkoutState === 'cancel') {
+      toast('Checkout canceled. Your current access is unchanged.');
+      return null;
+    }
+
+    if (portalState === 'return' && state.accessToken) {
+      const current = await billingStatus();
+      toast(`Membership · ${current?.tier || 'free'}`);
+      return current;
+    }
+
+    if (checkoutState !== 'return' || !state.accessToken) return null;
+
+    toast('Confirming membership…');
+    let current = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      current = await billingStatus();
+      if (['beta', 'alpha', 'owner'].includes(current?.tier) && ['active', 'trialing'].includes(current?.status)) {
+        toast(`Membership confirmed · ${current.tier}`);
+        return current;
+      }
+      await sleep(delay);
+    }
+    toast('Payment received. Membership is still being confirmed.');
+    return current;
+  }
+
   async function dispatch(capability, intent, payload = {}) {
     return request(CONFIG.routes.runtime, {
       method: 'POST',
@@ -330,7 +362,10 @@
     billing: {
       status: billingStatus,
       checkout: billingCheckout,
-      portal: billingPortal
+      portal: billingPortal,
+      confirmReturn: confirmBillingReturn
     }
   };
+
+  queueMicrotask(() => confirmBillingReturn().catch(() => {}));
 })();
