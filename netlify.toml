@@ -20,16 +20,15 @@
   status = 200
 
 [[headers]]
-  # Aggressive caching for immutable JavaScript across capability boundaries.
+  # Zero-build assets keep stable URLs, so they must revalidate after production deploys.
   for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
-  # Aggressive caching for immutable CSS across capability boundaries.
   for = "/*.css"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   # Service worker must always revalidate so production updates activate quickly.

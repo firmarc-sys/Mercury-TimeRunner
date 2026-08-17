@@ -1,8 +1,11 @@
 (() => {
   'use strict';
 
+  const ACCESS_TOKEN_KEY = 'mercury.supabase.access_token';
+  const REFRESH_TOKEN_KEY = 'mercury.supabase.refresh_token';
+
   const CONFIG = Object.freeze({
-    version: '4.0.0-skillui',
+    version: '4.1.0-skillui-billing',
     system: 'jahorin-mercury',
     ownerGid: '399152573423',
     ownerMode: 'Prime Orchestrator',
@@ -13,6 +16,13 @@
       ready: '/api/ready',
       identity: '/api/identity',
       session: '/api/identity/session',
+      authSignup: '/api/auth/signup',
+      authLogin: '/api/auth/login',
+      authRefresh: '/api/auth/refresh',
+      authMe: '/api/auth/me',
+      billingStatus: '/api/billing/status',
+      billingCheckout: '/api/billing/checkout',
+      billingPortal: '/api/billing/portal',
       render: '/api/render-state',
       iot: '/api/iot',
       syncori: '/api/syncori',
@@ -34,13 +44,32 @@
   const state = {
     surface: document.body?.dataset?.surface || 'unknown',
     identity: null,
-    online: navigator.onLine
+    billing: null,
+    online: navigator.onLine,
+    accessToken: localStorage.getItem(ACCESS_TOKEN_KEY) || '',
+    refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY) || ''
   };
 
   const apiBase = () => location.protocol === 'file:' ? CONFIG.ari : '';
   const url = path => /^https?:/i.test(path) ? path : `${apiBase()}${path}`;
   const uuid = () => crypto?.randomUUID?.() || `req-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  function setTokens(accessToken = '', refreshToken = '') {
+    state.accessToken = accessToken || '';
+    state.refreshToken = refreshToken || state.refreshToken || '';
+    if (state.accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, state.accessToken);
+    else localStorage.removeItem(ACCESS_TOKEN_KEY);
+    if (state.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, state.refreshToken);
+    else localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+
+  function clearTokens() {
+    state.accessToken = '';
+    state.refreshToken = '';
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
 
   async function request(path, options = {}) {
     const retries = Number.isInteger(options.retries) ? options.retries : 2;
@@ -58,6 +87,7 @@
           ...(options.headers || {})
         };
         if (options.body) headers['Content-Type'] = 'application/json';
+        if (!options.public && state.accessToken) headers.Authorization = `Bearer ${state.accessToken}`;
 
         const response = await window.fetch(url(path), {
           method: options.method || (options.body ? 'POST' : 'GET'),
@@ -93,6 +123,45 @@
     throw lastError;
   }
 
+  async function signup({ email, password, display_name = '' }) {
+    const result = await request(CONFIG.routes.authSignup, {
+      method: 'POST',
+      public: true,
+      body: { email, password, display_name }
+    });
+    if (result?.access_token) setTokens(result.access_token, result.refresh_token || '');
+    state.identity = null;
+    state.billing = null;
+    return result;
+  }
+
+  async function login({ email, password }) {
+    const result = await request(CONFIG.routes.authLogin, {
+      method: 'POST',
+      public: true,
+      body: { email, password }
+    });
+    setTokens(result?.access_token || '', result?.refresh_token || '');
+    state.identity = null;
+    state.billing = null;
+    return result;
+  }
+
+  async function refreshAuth() {
+    if (!state.refreshToken) throw new Error('No refresh token available');
+    const result = await request(CONFIG.routes.authRefresh, {
+      method: 'POST',
+      public: true,
+      body: { refresh_token: state.refreshToken }
+    });
+    setTokens(result?.access_token || '', result?.refresh_token || state.refreshToken);
+    return result;
+  }
+
+  async function me() {
+    return request(CONFIG.routes.authMe, { timeout: 7000, retries: 1 });
+  }
+
   async function identity() {
     try {
       state.identity = await request(CONFIG.routes.identity, { timeout: 7000, retries: 1 });
@@ -106,6 +175,7 @@
   async function authenticate(accessCode) {
     const output = await request(CONFIG.routes.session, {
       method: 'POST',
+      public: true,
       body: { access_code: accessCode }
     });
     await identity();
@@ -113,11 +183,66 @@
   }
 
   async function signOut() {
+    clearTokens();
+    state.identity = { authenticated: false };
+    state.billing = null;
     try {
-      return await request(CONFIG.routes.session, { method: 'DELETE' });
-    } finally {
-      state.identity = { authenticated: false };
+      return await request(CONFIG.routes.session, { method: 'DELETE', public: true });
+    } catch {
+      return { ok: true, authenticated: false };
     }
+  }
+
+  async function billingStatus() {
+    state.billing = await request(CONFIG.routes.billingStatus, { timeout: 10000, retries: 1 });
+    return state.billing;
+  }
+
+  async function billingCheckout(tier, { redirect = true } = {}) {
+    const result = await request(CONFIG.routes.billingCheckout, {
+      method: 'POST',
+      body: { tier }
+    });
+    if (redirect && result?.url) location.assign(result.url);
+    return result;
+  }
+
+  async function billingPortal({ redirect = true } = {}) {
+    const result = await request(CONFIG.routes.billingPortal, { method: 'POST', body: {} });
+    if (redirect && result?.url) location.assign(result.url);
+    return result;
+  }
+
+  async function confirmBillingReturn({ attempts = 12, delay = 850 } = {}) {
+    const params = new URLSearchParams(location.search);
+    const checkoutState = params.get('checkout');
+    const portalState = params.get('billing');
+
+    if (checkoutState === 'cancel') {
+      toast('Checkout canceled. Your current access is unchanged.');
+      return null;
+    }
+
+    if (portalState === 'return' && state.accessToken) {
+      const current = await billingStatus();
+      toast(`Membership · ${current?.tier || 'free'}`);
+      return current;
+    }
+
+    if (checkoutState !== 'return' || !state.accessToken) return null;
+
+    toast('Confirming membership…');
+    let current = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      current = await billingStatus();
+      if (['beta', 'alpha', 'owner'].includes(current?.tier) && ['active', 'trialing'].includes(current?.status)) {
+        toast(`Membership confirmed · ${current.tier}`);
+        return current;
+      }
+      await sleep(delay);
+    }
+    toast('Payment received. Membership is still being confirmed.');
+    return current;
   }
 
   async function dispatch(capability, intent, payload = {}) {
@@ -199,11 +324,12 @@
     if (!element) return null;
     try {
       const [health, ready] = await Promise.all([
-        request(CONFIG.routes.health, { timeout: 5000, retries: 1 }),
-        request(CONFIG.routes.ready, { timeout: 5000, retries: 1 })
+        request(CONFIG.routes.health, { timeout: 5000, retries: 1, public: true }),
+        request(CONFIG.routes.ready, { timeout: 5000, retries: 1, public: true })
       ]);
       element.dataset.online = 'true';
-      element.textContent = `ARI · ${ready?.ok === false ? 'configuring' : 'online'} · GID ${CONFIG.ownerGid}`;
+      const billing = health?.billing_configured ? 'billing ready' : 'billing configuring';
+      element.textContent = `ARI · ${ready?.ok === false ? 'configuring' : 'online'} · ${billing}`;
       return { h: health, r: ready };
     } catch {
       element.dataset.online = 'false';
@@ -224,6 +350,22 @@
     go,
     toast,
     dock,
-    status
+    status,
+    auth: {
+      signup,
+      login,
+      refresh: refreshAuth,
+      me,
+      setTokens,
+      clearTokens
+    },
+    billing: {
+      status: billingStatus,
+      checkout: billingCheckout,
+      portal: billingPortal,
+      confirmReturn: confirmBillingReturn
+    }
   };
+
+  queueMicrotask(() => confirmBillingReturn().catch(() => {}));
 })();
