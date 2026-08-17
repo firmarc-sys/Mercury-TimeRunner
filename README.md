@@ -58,7 +58,7 @@ SYNCORI gateway rooms do not increase the canonical page count.
 
 ## API topology
 
-The browser calls same-origin `/api/*` routes. Netlify proxies those requests to ARI.
+The browser calls same-origin `/api/*` routes. The production host proxies those requests to ARI.
 
 ARI production authority:
 
@@ -83,9 +83,30 @@ Known production API surface includes:
 
 Do not expose provider credentials in browser-delivered code. Google, Gemini, Vertex, Stripe, Supabase service credentials, and other privileged secrets remain server-side behind ARI/runtime authorization.
 
+## Vercel production deployment
+
+Root `vercel.json` is the canonical Vercel deployment contract.
+
+Production configuration:
+
+- Framework preset: Other
+- Repository root: repository root (`.`)
+- Build command: none
+- Install command: none
+- Output directory: `static`
+- Branch: `main`
+
+`/api/:path*` is externally rewritten to the production ARI Cloud Run gateway before the persistent-shell fallback. API rewrite caching is disabled. The browser therefore continues to call only same-origin `/api/*`; it never calls Agentic Mercury Runtime directly.
+
+The final catch-all rewrite resolves application navigation to `/index.html`, while Vercel continues to serve existing static assets and standalone capability files from `static/`.
+
+For a consumer-facing production deployment, Vercel Authentication / Deployment Protection must not block the public production domain.
+
+No Stripe, Supabase server, Vertex, Gemini, or Google Cloud secret belongs in Vercel environment variables for this frontend. Those credentials stay on ARI / Google Secret Manager.
+
 ## Netlify production deployment
 
-Root `netlify.toml` is canonical.
+Root `netlify.toml` remains canonical for Netlify.
 
 Production configuration:
 
@@ -112,7 +133,7 @@ Canonical Netlify target:
 
 `static/skillui-validation.json` records machine-readable source-release state.
 
-A passing source gate is not sufficient for final release. Production is complete only after the deployed Netlify revision is verified for shell integrity, canonical routes, PWA behavior, `/api/*` proxying, GID session behavior, camera/microphone permission flows, and truthful runtime failure states.
+A passing source gate is not sufficient for final release. Production is complete only after the deployed revision is verified for shell integrity, canonical routes, PWA behavior, `/api/*` proxying, GID session behavior, camera/microphone permission flows, and truthful runtime failure states.
 
 ## Release rule
 
