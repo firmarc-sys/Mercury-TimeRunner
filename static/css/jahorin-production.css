@@ -1,0 +1,82 @@
+/* JAHORIN TRISMEGISTUS — canonical production shell overrides */
+:root{
+  --jt-dock-h:92px;
+  --jt-silver:#e9edf0;
+  --jt-shadow:#010203;
+}
+html,body{background:#000;}
+body[data-surface="shell"] .skillui-shell{
+  grid-template-rows:minmax(72px,calc(64px + env(safe-area-inset-top))) minmax(0,1fr) calc(var(--jt-dock-h) + env(safe-area-inset-bottom));
+  background:#000;
+}
+.shell-header{
+  background:#000!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+}
+.shell-brand strong{
+  font-family:Didot,"Bodoni MT",Georgia,serif;
+  font-size:clamp(14px,4.3vw,25px)!important;
+  letter-spacing:.19em!important;
+  background:linear-gradient(180deg,#fff 0%,#5a6065 30%,#f8f8f8 51%,#22272b 70%,#c8cccf 100%)!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  color:transparent!important;
+}
+.shell-brand span{font-size:clamp(8px,2.1vw,11px)!important;letter-spacing:.22em;color:#8c9297!important;}
+.shell-status{border:0!important;background:transparent!important;color:#767d83!important;padding:0!important;}
+.shell-status[data-online="true"]{color:#cfd4d7!important;}
+.shell-viewport{position:relative;background:#000;isolation:isolate;}
+
+/* Living wake material */
+#jahorin-wake{position:absolute;inset:0;z-index:80;overflow:hidden;background:#000;display:grid;place-items:center;transition:opacity .8s ease,clip-path .9s cubic-bezier(.2,.75,.2,1);clip-path:circle(150% at 50% 50%);}
+#jahorin-wake.dissolving{opacity:0;clip-path:circle(0% at var(--wake-x,50%) var(--wake-y,50%));pointer-events:none;}
+#jahorin-mercury{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;}
+.jt-terminal{position:absolute;z-index:3;top:10%;left:50%;transform:translateX(-50%);width:min(88%,520px);font:500 clamp(9px,2.4vw,12px)/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.08em;color:#737a80;text-align:left;pointer-events:none;}
+.jt-terminal strong{display:block;color:#d7dbde;font-weight:600;}
+.jt-orb{position:relative;z-index:4;width:clamp(96px,27vw,148px);aspect-ratio:1;border:0;border-radius:50%;background:radial-gradient(circle at 31% 24%,#fff 0 4%,#777d82 11%,#0b0d0e 25%,#e9ecee 39%,#282c2f 53%,#f5f6f6 67%,#111315 82%,#9da2a5 100%);box-shadow:inset -17px -22px 31px #000,inset 13px 12px 25px #fff9,0 0 0 1px #fff6,0 25px 80px #000;cursor:pointer;animation:jt-breathe 3.8s ease-in-out infinite;}
+.jt-orb::after{content:"";position:absolute;inset:14%;border-radius:50%;background:radial-gradient(circle at 35% 24%,#fff9,transparent 23%),linear-gradient(145deg,transparent 14%,#fff8 31%,#060708 45%,#ddd 59%,transparent 74%);mix-blend-mode:screen;opacity:.58;animation:jt-highlight 5.5s linear infinite;}
+@keyframes jt-breathe{50%{transform:scale(1.045);filter:brightness(1.14)}}
+@keyframes jt-highlight{50%{transform:rotate(22deg) scale(.94)}}
+.jt-prompt{position:absolute;z-index:4;top:63%;left:50%;transform:translateX(-50%);width:88%;text-align:center;font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:#7f8589;opacity:0;animation:jt-prompt-in .8s ease 2s forwards;}
+@keyframes jt-prompt-in{to{opacity:1}}
+.jt-identity{position:absolute;z-index:4;bottom:4%;left:50%;transform:translateX(-50%);width:94%;text-align:center;font-size:8px;letter-spacing:.22em;color:#5f656a;white-space:nowrap;}
+
+/* Persistent intent surface */
+#jahorin-intent-shell{position:absolute;z-index:72;left:50%;bottom:15px;transform:translateX(-50%);width:min(88%,560px);display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #ffffff24;border-radius:999px;background:linear-gradient(180deg,#101214,#020303 57%,#151719);box-shadow:inset 0 1px 0 #fff3,inset 0 -9px 18px #000,0 13px 36px #000b;opacity:0;pointer-events:none;transition:opacity .5s;}
+body.jahorin-awake #jahorin-intent-shell{opacity:1;pointer-events:auto;}
+#jahorin-intent-shell[data-speech="LISTENING"]{box-shadow:inset 0 1px 0 #fff5,0 0 28px #d9efff24;}
+#jahorin-intent-shell .jt-mic{width:28px;height:28px;border:0;border-radius:50%;background:radial-gradient(circle,#fff 0 9%,#3f464b 12%,#070809 42%,#b9bec1 67%,#111 100%);color:transparent;flex:none;}
+#jahorin-intent{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#eef0f2;font-size:13px;letter-spacing:.035em;}
+#jahorin-intent::placeholder{color:#646a6f;}
+#jahorin-intent-shell button[type="submit"]{border:0;border-radius:999px;padding:8px 12px;background:linear-gradient(180deg,#fff,#656a6e 34%,#101214 62%,#aaa);color:#fff;font-size:9px;font-weight:800;letter-spacing:.12em;}
+#jahorin-response{position:absolute;z-index:68;left:50%;bottom:67px;transform:translateX(-50%);width:min(86%,620px);max-height:28%;overflow:auto;padding:9px 13px;color:#cfd4d8;font-size:12px;line-height:1.55;text-align:center;text-shadow:0 2px 8px #000;background:linear-gradient(90deg,transparent,#000d 12% 88%,transparent);opacity:0;transition:opacity .35s;pointer-events:none;}
+#jahorin-response.present{opacity:1;}
+
+/* Canonical five-key Mercury dock */
+.shell-dock,.dock{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important;padding:7px 7px calc(7px + env(safe-area-inset-bottom))!important;background:radial-gradient(ellipse at 50% -25%,#fff 0%,#696d70 8%,#08090a 23%,#e3e5e6 37%,#141617 53%,#b5b8ba 68%,#020303 82%,#74787b 100%)!important;border-top:0!important;box-shadow:inset 0 2px 3px #fff9,inset 0 13px 28px #fff1,0 -18px 45px #000!important;}
+.shell-dock button,.dock button{min-height:70px!important;border:0!important;border-radius:22% 25% 18% 20% / 20% 22% 25% 19%!important;background:radial-gradient(85% 48% at 50% 4%,#fff 0%,#a6aaad 8%,transparent 25%),linear-gradient(155deg,#f7f7f7 0%,#3c3f41 12%,#e2e4e5 25%,#0b0c0d 43%,#a6aaad 58%,#030404 72%,#e0e2e3 88%,#323537 100%)!important;color:#fff!important;box-shadow:inset 0 2px 4px #fff,inset 0 -8px 13px #000,0 4px 10px #000b!important;font-size:clamp(7px,1.8vw,10px)!important;letter-spacing:.08em!important;}
+.shell-dock .glyph,.dock .glyph{font-size:18px!important;filter:grayscale(1);}
+.shell-dock button[aria-current="page"],.dock button.active{box-shadow:inset 0 2px 5px #fff,inset 0 -8px 13px #000,0 0 0 1px #fff7,0 0 20px #fff2!important;}
+
+/* Mercury manifestation instead of generic loading */
+.viewport-loading::after{content:""!important;width:54px;height:54px;padding:0!important;border:0!important;border-radius:50%!important;background:radial-gradient(circle at 35% 28%,#fff,#555 14%,#050607 36%,#eee 58%,#111 78%,#888)!important;animation:jt-loader .7s ease-in-out infinite alternate;}
+@keyframes jt-loader{to{transform:translateX(-50%) scale(.66);filter:brightness(1.5)}}
+.shell-viewport.jt-reforming::before{content:"";position:absolute;z-index:66;inset:-20%;pointer-events:none;background:radial-gradient(circle at var(--reform-x,50%) 80%,#fff 0 2%,#555 7%,#020303 17%,#e7e7e7 26%,transparent 42%);mix-blend-mode:screen;animation:jt-reform .75s ease-out forwards;}
+@keyframes jt-reform{from{opacity:.9;transform:scale(.35)}to{opacity:0;transform:scale(2)}}
+
+/* Deep instrument surfaces; no glass/frosted cards */
+.panel,.capability-controls{border:1px solid #ffffff24!important;background:linear-gradient(180deg,#62676a 0%,#111315 5%,#030404 36%,#000 66%,#3b3f42 100%)!important;box-shadow:inset 0 1px 0 #fff7,inset 0 -1px 0 #fff2,0 18px 48px #000c!important;}
+.action,.suite-link{border:1px solid #ffffff30!important;background:linear-gradient(180deg,#dadcdd 0%,#44494c 13%,#08090a 43%,#000 68%,#777c7f 100%)!important;color:#fff!important;box-shadow:inset 0 1px 0 #fff9,inset 0 -5px 10px #000!important;}
+.status,.capability-readout,.output{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+
+/* Live optics dock/editor */
+.jt-optics-editor{position:absolute;z-index:40;inset:0;background:#000;display:grid;grid-template-rows:minmax(0,1fr) auto;}
+.jt-optics-editor canvas{width:100%;height:100%;object-fit:contain;background:#000;}
+.jt-editor-controls{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:10px;background:#050607;}
+.jt-editor-controls label{display:grid;gap:4px;font-size:8px;letter-spacing:.12em;color:#aaa;}
+.jt-editor-controls input{width:100%;accent-color:#fff;}
+.jt-editor-controls button{border:0;padding:8px;background:linear-gradient(#fff,#555);color:#050505;font-size:9px;font-weight:900;}
+
+@media(min-width:700px){body[data-surface="shell"] .skillui-shell{max-width:520px;margin:auto;box-shadow:0 0 0 1px #ffffff16,0 0 100px #000;}}
+@media(prefers-reduced-motion:reduce){.jt-orb,.jt-orb::after,.viewport-loading::after{animation:none!important;}#jahorin-wake,.shell-viewport.jt-reforming::before{transition-duration:.01ms!important;animation-duration:.01ms!important;}}

@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Agentic Mercury Time Runner",
-  "short_name": "Mercury",
-  "description": "Agentic Mercury Time Runner S.I.aaS living instrument runtime with Jahorin intelligence",
+  "name": "Jahorin Trismegistus",
+  "short_name": "Jahorin",
+  "description": "Jahorin Trismegistus — System Intelligence as a Service",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

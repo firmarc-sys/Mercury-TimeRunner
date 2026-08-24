@@ -32,9 +32,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Validate zero-build SkillUI frontend
+      - name: Validate zero-build Jahorin frontend
         run: |
-          for file in static/js/runtime.js static/js/skillui-shell.js static/js/capability.js; do
+          set -euo pipefail
+          for file in static/js/runtime.js static/js/skillui-shell.js static/js/capability.js static/js/jahorin-files.js static/js/jahorin-shell.js static/sw.js; do
             node --check "$file"
           done
           python - <<'PY'
@@ -43,9 +44,12 @@ jobs:
 
           root = Path('static')
           manifest = json.loads((root / 'repo-pages.json').read_text())
+          pwa = json.loads((root / 'manifest.json').read_text())
           pages = manifest['pages']
           assert len(pages) == manifest['expectedPageCount'] == 25
           assert manifest['groups'] == {'core': 5, 'syncori-audio': 10, 'syncori-optics': 10}
+          assert pwa['name'] == 'Jahorin Trismegistus'
+          assert pwa['display'] == 'standalone'
 
           missing = []
           for page in pages:
@@ -57,27 +61,48 @@ jobs:
               if not alias.is_file():
                   missing.append(str(alias))
 
-          if missing:
-              raise SystemExit('Missing canonical SkillUI files:\n' + '\n'.join(missing))
-
           required = [
-              root / 'index.html',
-              root / 'manifest.json',
-              root / 'sw.js',
-              root / 'css/skillui.css',
-              root / 'js/runtime.js',
-              root / 'js/skillui-shell.js',
-              root / 'js/capability.js',
-              root / 'syncori/index.html',
-              root / 'syncori/audio/index.html',
-              root / 'syncori/optics/index.html',
+              root / 'index.html', root / 'manifest.json', root / 'sw.js',
+              root / 'css/skillui.css', root / 'css/jahorin-production.css', root / 'css/jahorin-gate.css',
+              root / 'js/runtime.js', root / 'js/skillui-shell.js', root / 'js/capability.js',
+              root / 'js/jahorin-files.js', root / 'js/jahorin-shell.js',
+              root / 'syncori/index.html', root / 'syncori/audio/index.html', root / 'syncori/optics/index.html',
           ]
-          absent = [str(path) for path in required if not path.is_file()]
-          if absent:
-              raise SystemExit('Missing SkillUI infrastructure:\n' + '\n'.join(absent))
+          missing.extend(str(path) for path in required if not path.is_file())
+          if missing:
+              raise SystemExit('Missing canonical Jahorin files:\n' + '\n'.join(missing))
 
-          print('SkillUI manifest validation: PASS 25/25')
+          index = (root / 'index.html').read_text()
+          shell = (root / 'js/jahorin-shell.js').read_text()
+          runtime = (root / 'js/runtime.js').read_text()
+          capability = (root / 'js/capability.js').read_text()
+          files = (root / 'js/jahorin-files.js').read_text()
+          sw = (root / 'sw.js').read_text()
+
+          assert 'JAHORIN TRISMEGISTUS' in index
+          assert 'SYSTEM INTELLIGENCE AS A SERVICE' in index
+          assert 'id="jahorin-mercury"' in index
+          assert '<video id="boot"' not in index
+          for label in ('INTERWEB','AUGMENT','CODE','SCRIBE','OPTICS'):
+              assert label in shell
+          for label in ('SEE','CAPTURE','ANALYZE','MACRO','EDITOR'):
+              assert label in shell
+          for capability_name in ('loop','keys','drums','sample','mix'):
+              assert f"capability === '{capability_name}'" in capability
+          assert 'decodeAudioData' in capability
+          assert 'image_data_url' in shell
+          assert 'getCapabilities' in shell and 'applyConstraints' in shell
+          assert "module: 'mercury'" in runtime
+          assert '399152573423' in runtime and '399152573423' in shell
+          assert "Mercury.dispatch('scribe'" in files
+          assert "url.pathname.startsWith('/api/')" in sw and "url.pathname.startsWith('/ws/')" in sw
+          print('Jahorin SkillUI validation: PASS 25/25 + live shell + native capabilities')
           PY
 
+      - name: Verify browser code contains no committed provider secrets
+        run: |
+          set -euo pipefail
+          ! grep -RIE --exclude-dir=.git '(sk-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{20,}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY)' static
+
       - name: Build production container
-        run: docker build -t jahorin-mercury-release-gate .
+        run: docker build -t jahorin-trismegistus-release-gate .

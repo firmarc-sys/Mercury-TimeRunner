@@ -1,140 +1,125 @@
-# Agentic Mercury Time Runner
+# Jahorin Trismegistus
 
-Canonical zero-build production frontend for Agentic Mercury Time Runner S.I.aaS.
+Canonical zero-build production frontend for **Jahorin Trismegistus — System Intelligence as a Service**.
 
-## Product architecture
+## Runtime hierarchy
 
-- Agentic Mercury Time Runner — public product
-- Mercury — persistent runtime / living application shell
-- Jahorin — user-facing intelligence
-- GID — identity authority
-- TAE — Timeline Augmentation and orchestration layer
-- ARI — REST-first intelligence and capability gateway
-- SYNCORI — augmented Audio and Optics instrument suite
+- **ARI** — browser-facing REST gateway and provider authority
+- **MERCURY P.I.** — persistent living runtime and material shell
+- **TAE** — temporal/contextual orchestration
+- **JAHORIN TRISMEGISTUS** — user-facing orchestrating intelligence
+- **GID** — identity authority
 
-Jahorin remains the intelligence inside the product; it is not the public product name.
+Canonical owner/demo identity: **GID 399152573423 · PRIME ORCHESTRATOR**.
 
-## Canonical production frontend
+Core law:
+
+`HUMAN → INTENTION → UNDERSTANDING → ORCHESTRATION → CAPABILITY → ACTION → RESULT`
+
+## Production frontend
 
 The production web root is `static/`.
 
-Required runtime stack:
+The runtime is intentionally zero-build:
 
-- HTML5
-- CSS3
-- Vanilla JavaScript
-- Native ES Modules
-- Native Web Components where useful
+- HTML5 / CSS3
+- vanilla JavaScript + native ES modules
 - Canvas / WebGL where required
+- native Web Components
 - Fetch API
-- IndexedDB
-- Service Worker
-- PWA Manifest
-- browser-native device APIs
+- IndexedDB / local persistence where appropriate
+- Service Worker + PWA manifest
+- browser-native camera, microphone, speech and audio APIs
 
-There is no required React, Vite, Webpack, Babel, npm compilation, or frontend bundling step.
+No React/Vite/Webpack/Babel frontend build is required for production.
 
-The historical `frontend/` tree is legacy/reference material and MUST NOT be required for production deployment.
+## Persistent Mercury shell
 
-## Mercury shell law
+The live shell has three sibling surfaces:
 
-The persistent application shell contains three sibling surfaces:
+1. **HEADER**
+2. **VIEWPORT**
+3. **LIQUID DOCK**
 
-1. HEADER
-2. VIEWPORT
-3. LIQUID DOCK
+Capability content manifests only inside VIEWPORT. The Liquid Dock remains anchored to the device floor and is not nested inside capability content.
 
-The Liquid Dock never renders inside VIEWPORT. Capability content renders only inside VIEWPORT during normal in-app navigation.
+Primary dock law:
 
-## Canonical manifest
+`INTERWEB · AUGMENT · CODE · SCRIBE · OPTICS`
 
-`static/repo-pages.json` is the source of truth and must contain exactly 25 capability pages:
+When a real optics stream is active, that same dock becomes:
+
+`SEE · CAPTURE · ANALYZE · MACRO · EDITOR`
+
+The root experience begins black, forms a live Mercury wake surface, responds to touch with a material ripple, and then reveals the persistent runtime. The boot surface is live code, not an MP4 pretending to be the interface.
+
+## Intent-first runtime
+
+The persistent shell accepts voice or typed intent and sends it through same-origin ARI `/api/*` routes. Jahorin interprets returned orchestration/render state and manifests the required capability without exposing provider selection to the user.
+
+Voice handling is stateful and truthful: unsupported or denied microphone/speech APIs fall back to text instead of showing fake listening state.
+
+`TAE, enter Demo Mode` activates the Demo Mode seam and presents:
+
+`This is not an app. This is me.`
+
+with GID `399152573423` and mode `PRIME ORCHESTRATOR`.
+
+## Canonical capability registry
+
+`static/repo-pages.json` remains the route/scene source of truth and preserves exactly **25 canonical capability pages**:
 
 - Core: 5
 - SYNCORI Augmented Audio: 10
 - SYNCORI Augmented Optics: 10
 
-SYNCORI gateway rooms do not increase the canonical page count.
+The first five canonical SYNCORI audio instruments are live browser-audio instruments:
 
-## API topology
+- LOOP
+- KEYS
+- DRUMS
+- SAMPLE
+- MIX
 
-The browser calls same-origin `/api/*` routes. The production host proxies those requests to ARI.
+The other registered audio/optics scenes retain ARI-backed execution and can progressively gain deeper native instrumentation without changing the route registry.
 
-ARI production authority:
+## ARI contract
+
+The browser calls same-origin `/api/*`; production hosting rewrites/proxies those requests to ARI.
+
+Production ARI authority:
 
 `https://ari-689058655022.us-west1.run.app`
 
-Agentic Mercury Runtime:
-
-`https://agentic-mercury-runtime-689058655022.us-west1.run.app`
-
-Known production API surface includes:
+Canonical routes include:
 
 - `GET /api/health`
 - `GET /api/ready`
-- `GET /api/identity`
-- `POST /api/identity/session`
-- `DELETE /api/identity/session`
+- `GET|POST /api/identity`
+- `POST|DELETE /api/identity/session`
 - `GET|POST /api/render-state`
-- `/api/tae`
-- `/api/runtime`
-- `/api/syncori`
-- `/api/iot`
+- `GET|POST /api/iot`
+- `GET|POST /api/syncori`
+- `GET|POST /api/tae`
+- `POST /api/runtime`
+- `POST /api/generate`
 
-Do not expose provider credentials in browser-delivered code. Google, Gemini, Vertex, Stripe, Supabase service credentials, and other privileged secrets remain server-side behind ARI/runtime authorization.
+Provider secrets never belong in browser-delivered code.
 
-## Vercel production deployment
+## PWA
 
-Root `vercel.json` is the canonical Vercel deployment contract.
+`static/manifest.json` defines the installable Jahorin Trismegistus app. `static/sw.js` caches the shell and capability routes but explicitly excludes `/api/*` and `/ws/*`, preventing cached intelligence responses from being presented as live ARI results.
 
-Production configuration:
+## Deployment
 
-- Framework preset: Other
-- Repository root: repository root (`.`)
-- Build command: none
-- Install command: none
-- Output directory: `static`
-- Branch: `main`
+- `vercel.json` is the canonical Vercel zero-build deployment contract.
+- `netlify.toml` remains available for the Netlify zero-build target.
+- `/api/*` rewrites must occur before persistent-shell navigation fallback.
 
-`/api/:path*` is externally rewritten to the production ARI Cloud Run gateway before the persistent-shell fallback. API rewrite caching is disabled. The browser therefore continues to call only same-origin `/api/*`; it never calls Agentic Mercury Runtime directly.
+## MA'AT release law
 
-The final catch-all rewrite resolves application navigation to `/index.html`, while Vercel continues to serve existing static assets and standalone capability files from `static/`.
+`.github/workflows/release-gate.yml` is the source release gate. It validates backend syntax, frontend JavaScript syntax, PWA identity, canonical 25-page topology, Jahorin shell contracts, browser-secret scanning, and the production container build.
 
-For a consumer-facing production deployment, Vercel Authentication / Deployment Protection must not block the public production domain.
+A green source gate does **not** by itself prove real microphone/camera permission success, live provider execution, GID authentication, or deployed-domain behavior. Those must be verified against the deployed revision before declaring `PRODUCTION READY`.
 
-No Stripe, Supabase server, Vertex, Gemini, or Google Cloud secret belongs in Vercel environment variables for this frontend. Those credentials stay on ARI / Google Secret Manager.
-
-## Netlify production deployment
-
-Root `netlify.toml` remains canonical for Netlify.
-
-Production configuration:
-
-```toml
-[build]
-  base = "static"
-  command = ""
-  publish = "."
-```
-
-The `/api/*` proxy is declared before the persistent-shell fallback so API requests cannot be rewritten to HTML.
-
-Canonical Netlify target:
-
-- Project: `jahorin-mercury`
-- Repository: `firmarc-sys/Mercury-TimeRunner`
-- Branch: `main`
-- Build command: none
-- Published web root: `static/`
-
-## Validation
-
-`.github/workflows/release-gate.yml` validates backend syntax retained in this repository, the canonical zero-build SkillUI frontend, the 25-page manifest topology, required infrastructure, and the production container.
-
-`static/skillui-validation.json` records machine-readable source-release state.
-
-A passing source gate is not sufficient for final release. Production is complete only after the deployed revision is verified for shell integrity, canonical routes, PWA behavior, `/api/*` proxying, GID session behavior, camera/microphone permission flows, and truthful runtime failure states.
-
-## Release rule
-
-Do not redesign approved visual assets, add a framework requirement, add a 26th canonical capability page, nest the Liquid Dock inside VIEWPORT, expose browser secrets, or report simulated connectivity as real connectivity.
+Never report simulated connectivity as real connectivity, never expose provider credentials, never restore a sixth launcher to the canonical dock, and never replace live Mercury interaction with a static screenshot or decorative video.

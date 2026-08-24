@@ -1,6 +1,5 @@
 [build]
-  # Canonical zero-build SkillUI frontend lives in /static.
-  # No build commands or Node dependencies are required.
+  # Canonical zero-build Jahorin Trismegistus frontend lives in /static.
   base = "static"
   command = ""
   publish = "."
@@ -13,38 +12,41 @@
   force = true
 
 [[redirects]]
-  # Route unresolved application paths back to the persistent Mercury Shell.
-  # Existing standalone capability index.html files continue to resolve directly.
+  # Existing capability routes resolve directly; unknown app routes return to the persistent shell.
   from = "/*"
   to = "/index.html"
   status = 200
 
 [[headers]]
-  # Aggressive caching for immutable JavaScript across capability boundaries.
+  # Runtime JavaScript must revalidate so a new production revision cannot be masked by stale year-long cache entries.
   for = "/*.js"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  # Aggressive caching for immutable CSS across capability boundaries.
-  for = "/*.css"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  # Service worker must always revalidate so production updates activate quickly.
-  for = "/sw.js"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
-  # Manifest stays fresh while still allowing short-lived CDN reuse.
+  # Runtime CSS must revalidate for the same reason.
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
   for = "/manifest.json"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
-  # Same-origin device capabilities used by SYNCORI Audio and Optics.
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  # Same-origin device capabilities used by voice, SYNCORI Audio and Horus Optics.
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"

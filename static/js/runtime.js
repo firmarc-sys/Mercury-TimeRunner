@@ -2,8 +2,10 @@
   'use strict';
 
   const CONFIG = Object.freeze({
-    version: '4.0.0-skillui',
-    system: 'jahorin-mercury',
+    version: '5.0.0-jahorin',
+    product: 'Jahorin Trismegistus',
+    category: 'System Intelligence as a Service',
+    system: 'jahorin-trismegistus',
     ownerGid: '399152573423',
     ownerMode: 'Prime Orchestrator',
     ari: 'https://ari-689058655022.us-west1.run.app',
@@ -50,7 +52,6 @@
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), options.timeout || 30000);
-
       try {
         const headers = {
           Accept: 'application/json',
@@ -70,13 +71,11 @@
 
         const contentType = response.headers.get('content-type') || '';
         const data = contentType.includes('json') ? await response.json() : await response.text();
-
         if (!response.ok) {
           const error = new Error(data?.error || data?.detail || `ARI HTTP ${response.status}`);
           error.status = response.status;
           throw error;
         }
-
         state.online = true;
         return data;
       } catch (error) {
@@ -89,7 +88,6 @@
         clearTimeout(timer);
       }
     }
-
     throw lastError;
   }
 
@@ -104,20 +102,14 @@
   }
 
   async function authenticate(accessCode) {
-    const output = await request(CONFIG.routes.session, {
-      method: 'POST',
-      body: { access_code: accessCode }
-    });
+    const output = await request(CONFIG.routes.session, { method: 'POST', body: { access_code: accessCode } });
     await identity();
     return output;
   }
 
   async function signOut() {
-    try {
-      return await request(CONFIG.routes.session, { method: 'DELETE' });
-    } finally {
-      state.identity = { authenticated: false };
-    }
+    try { return await request(CONFIG.routes.session, { method: 'DELETE' }); }
+    finally { state.identity = { authenticated: false }; }
   }
 
   async function dispatch(capability, intent, payload = {}) {
@@ -127,11 +119,13 @@
         gid: state.identity?.authenticated ? state.identity.gid : null,
         intent,
         capability,
-        module: state.surface,
+        module: 'mercury',
         payload,
         request_id: uuid(),
         context: {
           href: location.href,
+          surface: state.surface,
+          product: CONFIG.product,
           locale: navigator.language,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         }
@@ -140,10 +134,7 @@
   }
 
   async function tae(prompt = 'TAE, enter Demo Mode') {
-    return request(CONFIG.routes.tae, {
-      method: 'POST',
-      body: { prompt, request_id: uuid() }
-    });
+    return request(CONFIG.routes.tae, { method: 'POST', body: { prompt, request_id: uuid() } });
   }
 
   function go(surface) {
@@ -172,9 +163,8 @@
     const element = document.querySelector('.dock');
     if (!element) return;
     const items = [
-      ['mercury', '☿', 'Mercury'],
       ['interweb', '◎', 'Interweb'],
-      ['augment', '◉', 'Syncori'],
+      ['augment', '♫', 'Augment'],
       ['code', '⌨', 'Code'],
       ['scribe', '✒', 'Scribe'],
       ['optics', '◉', 'Optics']
@@ -202,8 +192,9 @@
         request(CONFIG.routes.health, { timeout: 5000, retries: 1 }),
         request(CONFIG.routes.ready, { timeout: 5000, retries: 1 })
       ]);
-      element.dataset.online = 'true';
-      element.textContent = `ARI · ${ready?.ok === false ? 'configuring' : 'online'} · GID ${CONFIG.ownerGid}`;
+      const readyOk = ready?.ok !== false;
+      element.dataset.online = readyOk ? 'true' : 'false';
+      element.textContent = `ARI · ${readyOk ? 'online' : 'configuring'} · GID ${CONFIG.ownerGid}`;
       return { h: health, r: ready };
     } catch {
       element.dataset.online = 'false';
@@ -212,18 +203,5 @@
     }
   }
 
-  globalThis.Mercury = {
-    CONFIG,
-    state,
-    request,
-    identity,
-    authenticate,
-    signOut,
-    dispatch,
-    tae,
-    go,
-    toast,
-    dock,
-    status
-  };
+  globalThis.Mercury = { CONFIG, state, request, identity, authenticate, signOut, dispatch, tae, go, toast, dock, status };
 })();
