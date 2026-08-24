@@ -1,4 +1,4 @@
-const CACHE = 'jahorin-trismegistus-skillui-v5';
+const CACHE = 'jahorin-trismegistus-skillui-v6';
 const CORE = [
   '/',
   '/manifest.json',
@@ -10,6 +10,7 @@ const CORE = [
   '/js/runtime.js',
   '/js/skillui-shell.js',
   '/js/capability.js',
+  '/js/jahorin-files.js',
   '/js/jahorin-shell.js',
   '/home/',
   '/interweb/',
