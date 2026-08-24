@@ -7,3 +7,6 @@ body:not(.jahorin-awake) #jahorin-response{opacity:0!important;pointer-events:no
 body:not(.jahorin-awake) .shell-header{transform:translateY(-18px);}
 body:not(.jahorin-awake) .shell-dock{transform:translateY(100%);}
 body.jahorin-awake .shell-header,body.jahorin-awake .shell-dock{opacity:1;transform:none;}
+/* Canvas owns the single visible Mercury orb; this transparent button is its touch target. */
+#jahorin-orb.jt-orb{position:absolute!important;left:50%!important;top:45%!important;transform:translate(-50%,-50%)!important;background:transparent!important;box-shadow:none!important;animation:none!important;}
+#jahorin-orb.jt-orb::after{display:none!important;}
