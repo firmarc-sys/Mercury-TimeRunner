@@ -35,7 +35,7 @@ jobs:
       - name: Validate zero-build Jahorin frontend
         run: |
           set -euo pipefail
-          for file in static/js/runtime.js static/js/skillui-shell.js static/js/capability.js static/js/jahorin-shell.js static/sw.js; do
+          for file in static/js/runtime.js static/js/skillui-shell.js static/js/capability.js static/js/jahorin-files.js static/js/jahorin-shell.js static/sw.js; do
             node --check "$file"
           done
           python - <<'PY'
@@ -64,7 +64,8 @@ jobs:
           required = [
               root / 'index.html', root / 'manifest.json', root / 'sw.js',
               root / 'css/skillui.css', root / 'css/jahorin-production.css', root / 'css/jahorin-gate.css',
-              root / 'js/runtime.js', root / 'js/skillui-shell.js', root / 'js/capability.js', root / 'js/jahorin-shell.js',
+              root / 'js/runtime.js', root / 'js/skillui-shell.js', root / 'js/capability.js',
+              root / 'js/jahorin-files.js', root / 'js/jahorin-shell.js',
               root / 'syncori/index.html', root / 'syncori/audio/index.html', root / 'syncori/optics/index.html',
           ]
           missing.extend(str(path) for path in required if not path.is_file())
@@ -74,17 +75,28 @@ jobs:
           index = (root / 'index.html').read_text()
           shell = (root / 'js/jahorin-shell.js').read_text()
           runtime = (root / 'js/runtime.js').read_text()
+          capability = (root / 'js/capability.js').read_text()
+          files = (root / 'js/jahorin-files.js').read_text()
+          sw = (root / 'sw.js').read_text()
+
           assert 'JAHORIN TRISMEGISTUS' in index
           assert 'SYSTEM INTELLIGENCE AS A SERVICE' in index
           assert 'id="jahorin-mercury"' in index
           assert '<video id="boot"' not in index
           for label in ('INTERWEB','AUGMENT','CODE','SCRIBE','OPTICS'):
               assert label in shell
-          assert "const OPTICS = [['SEE'" in shell
-          assert 'CAPTURE' in shell and 'ANALYZE' in shell and 'MACRO' in shell and 'EDITOR' in shell
+          for label in ('SEE','CAPTURE','ANALYZE','MACRO','EDITOR'):
+              assert label in shell
+          for capability_name in ('loop','keys','drums','sample','mix'):
+              assert f"capability === '{capability_name}'" in capability
+          assert 'decodeAudioData' in capability
+          assert 'image_data_url' in shell
+          assert 'getCapabilities' in shell and 'applyConstraints' in shell
           assert "module: 'mercury'" in runtime
           assert '399152573423' in runtime and '399152573423' in shell
-          print('Jahorin SkillUI validation: PASS 25/25 + live shell')
+          assert "Mercury.dispatch('scribe'" in files
+          assert "url.pathname.startsWith('/api/')" in sw and "url.pathname.startsWith('/ws/')" in sw
+          print('Jahorin SkillUI validation: PASS 25/25 + live shell + native capabilities')
           PY
 
       - name: Verify browser code contains no committed provider secrets
