@@ -119,7 +119,6 @@
     setTimeout(() => viewport.classList.remove('jt-reforming'), 820);
   }
 
-  /* live Mercury wake field */
   const field = { ctx:null,dpr:1,w:0,h:0,t:0,ripples:[],raf:0 };
   function resizeField() {
     if (!canvas) return;
@@ -164,7 +163,6 @@
     field.ripples.push({x:clientX-rect.left,y:clientY-rect.top,started:performance.now()});
   }
 
-  /* voice-first runtime */
   const SpeechCtor = () => window.SpeechRecognition || window.webkitSpeechRecognition || null;
   function restartRecognition() {
     if (!state.listening || state.speaking || !state.recognizer) return;
@@ -223,7 +221,7 @@
   function resultRoute(result) {
     const explicit=result?.render?.route||result?.manifest?.route||result?.route;
     if(typeof explicit==='string'&&explicit.startsWith('/'))return explicit;
-    const raw=String(result?.render?.scene||result?.render_state?.scene||result?.capability||result?.machine||result?.orchestration?.machine||result?.orchestration?.capability||'').toLowerCase();
+    const raw=String(result?.render?.scene||result?.render_state?.scene||result?.capability||result?.machine||result?.orchestration?.machine||result?.orchestration?.capability||result?.orchestration?.plan?.[0]?.machine||'').toLowerCase();
     if(/horus|optic|vision/.test(raw))return'/syncori/optics/';
     if(/hathor|syncori|augment|audio/.test(raw))return'/syncori/';
     if(/ptah|code/.test(raw))return'/code/';
@@ -251,7 +249,9 @@
     setRuntime('UNDERSTANDING');showResponse(text);materialPulse();
     try {
       setRuntime('ORCHESTRATING');
-      const result=await Mercury.dispatch('auto',text,{modality,source:'jahorin-shell',gid:GID});
+      const request=Mercury.dispatch('auto',text,{modality,source:'jahorin-shell',gid:GID});
+      setRuntime('EXECUTING');
+      const result=await request;
       setRuntime('MANIFESTING');const speech=resultText(result),route=resultRoute(result);
       if(speech){showResponse(speech);speak(speech);} if(route)globalThis.SkillUI?.navigate?.(route); setRuntime('ACTIVE');
     } catch(error) { setRuntime('ERROR');showResponse(`ARI could not execute that intention: ${error.message}`,true); }
@@ -271,7 +271,6 @@
     setTimeout(()=>wakeLayer?.classList.add('dissolving'),420);setTimeout(()=>wakeLayer?.remove(),1350);
   }
 
-  /* optics physical instrument mode */
   const activeOpticsComponent=()=>state.optics||viewport?.querySelector('syncori-capability[group="syncori-optics"]')||null;
   function opticsReadout(component,text){const out=component?.querySelector('.capability-readout');if(out)out.textContent=text;showResponse(text);}
   function captureOptics(component){
