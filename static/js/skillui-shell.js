@@ -192,14 +192,55 @@ function bindScribe() {
 }
 
 function bindGid() {
-  const input = VIEWPORT.querySelector('#code');
-  VIEWPORT.querySelector('#auth')?.addEventListener('click', async () => {
+  const email = VIEWPORT.querySelector('#email');
+  const display = VIEWPORT.querySelector('#display');
+  const password = VIEWPORT.querySelector('#password');
+  const state = VIEWPORT.querySelector('#member-state');
+  const ownerCode = VIEWPORT.querySelector('#code');
+  const show = message => {
+    if (state) state.textContent = message;
+    Mercury.toast(message);
+  };
+
+  VIEWPORT.querySelector('#signup')?.addEventListener('click', async () => {
     try {
-      await Mercury.authenticate(input?.value || '');
-      Mercury.toast('GID authenticated.');
+      if (state) state.textContent = 'Creating your Galactic Identity…';
+      const result = await Mercury.auth.signup({
+        email: email?.value || '',
+        password: password?.value || '',
+        display_name: display?.value || ''
+      });
+      if (result?.confirmation_required) {
+        show('GID created. Confirm your email, then sign in.');
+        return;
+      }
+      await Mercury.identity();
+      show('GID active · Free tier. Welcome home.');
       setTimeout(() => navigate('/home/'), 320);
     } catch (error) {
-      Mercury.toast(error.message);
+      show(error.message);
+    }
+  });
+
+  VIEWPORT.querySelector('#login')?.addEventListener('click', async () => {
+    try {
+      if (state) state.textContent = 'Restoring your identity…';
+      await Mercury.auth.login({ email: email?.value || '', password: password?.value || '' });
+      await Mercury.identity();
+      show('Identity restored. Welcome home.');
+      setTimeout(() => navigate('/home/'), 320);
+    } catch (error) {
+      show(error.message);
+    }
+  });
+
+  VIEWPORT.querySelector('#auth')?.addEventListener('click', async () => {
+    try {
+      await Mercury.authenticate(ownerCode?.value || '');
+      show('Prime Orchestrator authenticated.');
+      setTimeout(() => navigate('/home/'), 320);
+    } catch (error) {
+      show(error.message);
     }
   });
   VIEWPORT.querySelector('#public')?.addEventListener('click', () => navigate('/home/?demo=1'));

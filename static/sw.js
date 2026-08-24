@@ -1,4 +1,4 @@
-const CACHE = 'jahorin-mercury-skillui-v4';
+const CACHE = 'jahorin-mercury-skillui-v4.1-billing';
 const CORE = [
   '/',
   '/manifest.json',
@@ -28,7 +28,7 @@ async function preCache() {
     const paths = manifest.pages.flatMap(page => [page.route, `/${page.path}`]);
     await Promise.all(paths.map(path => cache.add(path).catch(() => null)));
   } catch {
-    // Core cache remains usable even if manifest expansion fails during install.
+    // Core cache remains usable if manifest expansion is temporarily unavailable.
   }
 }
 
