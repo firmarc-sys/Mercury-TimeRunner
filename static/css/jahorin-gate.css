@@ -1,0 +1,9 @@
+/* Wake gate: black first frame, live shell revealed only after user touches Mercury. */
+body:not(.jahorin-awake) .shell-header,
+body:not(.jahorin-awake) .shell-dock,
+body:not(.jahorin-awake) #jahorin-intent-shell,
+body:not(.jahorin-awake) #jahorin-response{opacity:0!important;pointer-events:none!important;}
+.shell-header,.shell-dock{transition:opacity .7s ease,transform .7s cubic-bezier(.2,.75,.2,1);}
+body:not(.jahorin-awake) .shell-header{transform:translateY(-18px);}
+body:not(.jahorin-awake) .shell-dock{transform:translateY(100%);}
+body.jahorin-awake .shell-header,body.jahorin-awake .shell-dock{opacity:1;transform:none;}
