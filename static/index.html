@@ -4,41 +4,58 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="application-name" content="Jahorin Trismegistus">
+  <meta name="description" content="Jahorin Trismegistus — System Intelligence as a Service">
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/css/mercury.css">
   <link rel="stylesheet" href="/css/skillui.css">
-  <title>Agentic Mercury Time Runner</title>
+  <link rel="stylesheet" href="/css/jahorin-production.css">
+  <title>Jahorin Trismegistus — System Intelligence as a Service</title>
 </head>
-<body data-surface="shell">
+<body data-surface="shell" data-runtime="BOOT" data-speech="IDLE">
   <main class="app skillui-shell" id="mercury-shell">
-    <header class="shell-header" aria-label="Agentic Mercury Time Runner">
+    <header class="shell-header" aria-label="Jahorin Trismegistus">
       <div class="shell-brand">
-        <strong id="shell-title">Agentic Mercury Time Runner</strong>
-        <span id="shell-subtitle">S.I.aaS · System Intelligence as a Service</span>
+        <strong id="shell-title">JAHORIN TRISMEGISTUS</strong>
+        <span id="shell-subtitle">SYSTEM INTELLIGENCE AS A SERVICE</span>
       </div>
       <div class="status shell-status" aria-live="polite">ARI · connecting</div>
     </header>
 
     <section id="ari-viewport" class="viewport shell-viewport" aria-live="polite" aria-busy="false">
-      <section id="landing" class="shell-landing" data-shell-view="landing">
-        <video id="boot" class="intro-video" autoplay muted playsinline preload="auto">
-          <source src="/assets2/boot.mp4" type="video/mp4">
-        </video>
-        <div class="screen-shade"></div>
-        <div class="center-cta">
-          <button id="enter" class="action" type="button">Enter Syncori Suite</button>
-          <button id="demo" class="action secondary" type="button">Explore Public Demo</button>
-          <p id="tae-message">Authenticated intelligence becomes an instrument.</p>
-        </div>
-      </section>
+      <section class="shell-landing" data-shell-view="landing" aria-hidden="true"></section>
     </section>
 
-    <nav id="liquid-dock" class="dock shell-dock" aria-label="Mercury capabilities"></nav>
+    <nav id="liquid-dock" class="dock shell-dock" aria-label="Jahorin capabilities"></nav>
+
+    <section id="jahorin-wake" aria-label="Wake Jahorin">
+      <canvas id="jahorin-mercury" aria-hidden="true"></canvas>
+      <div class="jt-terminal" aria-hidden="true">
+        <strong>&gt; INITIALIZE // MERCURY P.I.</strong>
+        ARI · TAE · JAHORIN · GID<br>
+        MATERIAL STATE // FORMING<br>
+        ORCHESTRATOR // PRIME
+      </div>
+      <button id="jahorin-orb" class="jt-orb" type="button" aria-label="Touch the Mercury surface to wake Jahorin"></button>
+      <div class="jt-prompt">Touch the surface</div>
+      <div class="jt-identity">GID 399152573423 · PRIME ORCHESTRATOR</div>
+    </section>
+
+    <div id="jahorin-response" aria-live="polite"></div>
+
+    <form id="jahorin-intent-shell" autocomplete="off">
+      <button id="jahorin-mic" class="jt-mic" type="button" aria-label="Toggle voice listening">MIC</button>
+      <input id="jahorin-intent" aria-label="Intent" placeholder="Speak — or type your intent">
+      <button type="submit">SEND</button>
+    </form>
   </main>
 
   <script src="/js/runtime.js"></script>
   <script type="module" src="/js/skillui-shell.js"></script>
+  <script type="module" src="/js/jahorin-shell.js"></script>
 </body>
 </html>
